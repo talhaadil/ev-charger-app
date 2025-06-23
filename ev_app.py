@@ -427,59 +427,59 @@ with tab2:
         st.session_state.add_lat = map_picker_data["last_clicked"]["lat"]
         st.session_state.add_lon = map_picker_data["last_clicked"]["lng"]
 
-    col1, col2 = st.columns(2)
-    with col1:
-        name = st.text_input("Station Name")
-        lat = st.number_input("Latitude", format="%.6f", value=st.session_state.add_lat, key="lat_input")
-        price = st.number_input("Price per kWh ($)", value=0.0, format="%.2f")
-        charger_type = st.selectbox("Charger Type", ["2kWh", "7kWh", "50kWh", "Other"])
-        charger_desc = ""
-        if charger_type == "Other":
-            charger_desc = st.text_input("Describe the charger type (required)")
-        contact = st.text_input("Contact Information")
-    with col2:
-        lon = st.number_input("Longitude", format="%.6f", value=st.session_state.add_lon, key="lon_input")
-        status = st.selectbox("Status", ["Available", "In Use", "Out of Service"])
-        amenities = st.multiselect(
-            "Amenities",
-            ["Restrooms", "Food", "Shopping", "WiFi", "Covered", "24/7"]
-        )
-        operating_hours = st.text_input("Operating Hours (e.g., '24/7' or '9 AM - 10 PM')")
+    # --- All form fields and submit button must be inside the form ---
+    with st.form("add_charger_form"):
+        col1, col2 = st.columns(2)
+        with col1:
+            name = st.text_input("Station Name")
+            lat = st.number_input("Latitude", format="%.6f", value=st.session_state.add_lat, key="lat_input")
+            price = st.number_input("Price per kWh ($)", value=0.0, format="%.2f")
+            charger_type = st.selectbox("Charger Type", ["2kWh", "7kWh", "50kWh", "Other"])
+            charger_desc = ""
+            if charger_type == "Other":
+                charger_desc = st.text_input("Describe the charger type (required)")
+            contact = st.text_input("Contact Information")
+        with col2:
+            lon = st.number_input("Longitude", format="%.6f", value=st.session_state.add_lon, key="lon_input")
+            status = st.selectbox("Status", ["Available", "In Use", "Out of Service"])
+            amenities = st.multiselect(
+                "Amenities",
+                ["Restrooms", "Food", "Shopping", "WiFi", "Covered", "24/7"]
+            )
+            operating_hours = st.text_input("Operating Hours (e.g., '24/7' or '9 AM - 10 PM')")
 
-    # Keep map and fields in sync
-    st.session_state.add_lat = lat
-    st.session_state.add_lon = lon
+        # Keep map and fields in sync
+        st.session_state.add_lat = lat
+        st.session_state.add_lon = lon
 
-    submit_button = st.form_submit_button("Add Charging Station")
-    
-    if submit_button:
-        if name and lat != 0 and lon != 0 and (charger_type != "Other" or (charger_type == "Other" and charger_desc.strip() != "")):
-            try:
-                # Prepare data
-                new_data = {
-                    'name': name,
-                    'lat': lat,
-                    'lon': lon,
-                    'price': price,
-                    'type': charger_type if charger_type != "Other" else charger_desc,
-                    'contact': contact,
-                    'status': status,
-                    'rating': 0,
-                    'reviews': 0,
-                    'amenities': json.dumps(amenities),
-                    'operating_hours': operating_hours,
-                    'verified_email': 'pending_verification'  # Placeholder for now
-                }
-                
-                # Add to Google Sheet
-                sheet.append_row(list(new_data.values()))
-                st.success("Charging station added successfully!")
-                time.sleep(2)
-                st.experimental_rerun()
-            except Exception as e:
-                st.error(f"Error adding charging station: {str(e)}")
-        else:
-            st.error("Please fill in all required fields (name, latitude, longitude, and charger description if 'Other' is selected)")
+        submit_button = st.form_submit_button("Add Charging Station")
+        if submit_button:
+            if name and lat != 0 and lon != 0 and (charger_type != "Other" or (charger_type == "Other" and charger_desc.strip() != "")):
+                try:
+                    # Prepare data
+                    new_data = {
+                        'name': name,
+                        'lat': lat,
+                        'lon': lon,
+                        'price': price,
+                        'type': charger_type if charger_type != "Other" else charger_desc,
+                        'contact': contact,
+                        'status': status,
+                        'rating': 0,
+                        'reviews': 0,
+                        'amenities': json.dumps(amenities),
+                        'operating_hours': operating_hours,
+                        'verified_email': 'pending_verification'  # Placeholder for now
+                    }
+                    # Add to Google Sheet
+                    sheet.append_row(list(new_data.values()))
+                    st.success("Charging station added successfully!")
+                    time.sleep(2)
+                    st.experimental_rerun()
+                except Exception as e:
+                    st.error(f"Error adding charging station: {str(e)}")
+            else:
+                st.error("Please fill in all required fields (name, latitude, longitude, and charger description if 'Other' is selected)")
 
 with tab3:
     st.markdown("### Find Nearest Charging Stations")
@@ -540,4 +540,3 @@ with tab3:
                 st.error("Location not found. Please try a different search query.")
         except Exception as e:
             st.error(f"Error searching for locations: {str(e)}")
-
