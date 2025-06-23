@@ -319,7 +319,7 @@ except Exception as e:
     df = pd.DataFrame()
 
 # Main app
-st.title("⚡ EV Charging Station Finder")
+st.title("⚡ Freddie - EV Charging Station Finder")
 st.markdown("Find and manage electric vehicle charging stations near you!")
 
 # Create tabs for different sections
