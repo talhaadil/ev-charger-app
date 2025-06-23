@@ -325,6 +325,10 @@ st.markdown("Find and manage electric vehicle charging stations near you!")
 # Create tabs for different sections
 tab1, tab2, tab3 = st.tabs(["🗺️ Map View", "📝 Add Charger", "🔍 Find Nearest"])
 
+# Default Karachi coordinates
+KARACHI_LAT = 24.8607
+KARACHI_LON = 67.0011
+
 with tab1:
     st.markdown("### View Charging Stations")
     st.markdown("Explore charging stations on the interactive map below.")
@@ -367,6 +371,12 @@ with tab1:
         # Display map with improved styling
         st_folium(m, width=800, height=600)
     else:
+        m = folium.Map(
+            location=[KARACHI_LAT, KARACHI_LON],
+            zoom_start=12,
+            tiles='CartoDB positron'
+        )
+        st_folium(m, width=800, height=600)
         st.warning("No charging stations found. Add some stations to see them on the map!")
 
 with tab2:
@@ -378,9 +388,9 @@ with tab2:
 
     # Session state for map picker
     if 'add_lat' not in st.session_state:
-        st.session_state.add_lat = 24.8607
+        st.session_state.add_lat = KARACHI_LAT
     if 'add_lon' not in st.session_state:
-        st.session_state.add_lon = 67.0011
+        st.session_state.add_lon = KARACHI_LON
 
     # Use My Location button (browser geolocation)
     st.markdown('''
@@ -427,6 +437,11 @@ with tab2:
         st.session_state.add_lat = map_picker_data["last_clicked"]["lat"]
         st.session_state.add_lon = map_picker_data["last_clicked"]["lng"]
 
+    # Sanity check for land (simple bounding box for Karachi)
+    def is_on_land(lat, lon):
+        # Karachi bounding box (approximate)
+        return 24.7 <= lat <= 25.1 and 66.8 <= lon <= 67.4
+
     # --- All form fields and submit button must be inside the form ---
     with st.form("add_charger_form"):
         col1, col2 = st.columns(2)
@@ -454,7 +469,9 @@ with tab2:
 
         submit_button = st.form_submit_button("Add Charging Station")
         if submit_button:
-            if name and lat != 0 and lon != 0 and (charger_type != "Other" or (charger_type == "Other" and charger_desc.strip() != "")):
+            if not is_on_land(lat, lon):
+                st.error("The selected location appears to be in the sea or outside Karachi. Please pick a valid land location in Karachi.")
+            elif name and lat != 0 and lon != 0 and (charger_type != "Other" or (charger_type == "Other" and charger_desc.strip() != "")):
                 try:
                     # Prepare data
                     new_data = {
@@ -474,7 +491,9 @@ with tab2:
                     # Add to Google Sheet
                     sheet.append_row(list(new_data.values()))
                     st.success("Charging station added successfully!")
-                    time.sleep(2)
+                    # Reset form fields to defaults (refresh form)
+                    st.session_state.add_lat = KARACHI_LAT
+                    st.session_state.add_lon = KARACHI_LON
                     st.experimental_rerun()
                 except Exception as e:
                     st.error(f"Error adding charging station: {str(e)}")
@@ -540,3 +559,4 @@ with tab3:
                 st.error("Location not found. Please try a different search query.")
         except Exception as e:
             st.error(f"Error searching for locations: {str(e)}")
+
