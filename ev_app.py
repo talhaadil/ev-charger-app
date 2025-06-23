@@ -332,52 +332,40 @@ KARACHI_LON = 67.0011
 with tab1:
     st.markdown("### View Charging Stations")
     st.markdown("Explore charging stations on the interactive map below.")
-    
-    # Map view with improved styling
+    # Use the same map style as Add Charger (centered on Karachi by default)
     if not df.empty:
-        # Create map with a modern style
         m = folium.Map(
             location=[df['lat'].mean(), df['lon'].mean()],
             zoom_start=13,
-            tiles='CartoDB positron'  # Modern, clean style
+            tiles='CartoDB positron'
         )
-        
-        # Add marker cluster for better visualization
-        marker_cluster = MarkerCluster().add_to(m)
-        
-        # Add markers with improved popups
-        for _, row in df.iterrows():
-            popup_content = f"""
-            <div style='font-family: Arial, sans-serif; padding: 10px;'>
-                <h3 style='color: #4CAF50; margin-bottom: 10px;'>{row['name']}</h3>
-                <p style='margin: 5px 0;'><b>Type:</b> {row['type']}</p>
-                <p style='margin: 5px 0;'><b>Price:</b> ${row['price']}/kWh</p>
-                <p style='margin: 5px 0;'><b>Status:</b> {row['status']}</p>
-                <p style='margin: 5px 0;'><b>Rating:</b> {'⭐' * safe_rating_convert(row.get('rating'))}</p>
-                <p style='margin: 5px 0;'><b>Contact:</b> {row['contact']}</p>
-                <p style='margin: 5px 0;'><b>Amenities:</b> {', '.join(safe_json_loads(row.get('amenities', '[]')))}</p>
-            </div>
-            """
-            folium.Marker(
-                [row['lat'], row['lon']],
-                popup=folium.Popup(popup_content, max_width=300),
-                tooltip=row['name']
-            ).add_to(marker_cluster)
-        
-        # Add fullscreen and locate controls
-        Fullscreen().add_to(m)
-        LocateControl().add_to(m)
-        
-        # Display map with improved styling
-        st_folium(m, width=800, height=600)
     else:
         m = folium.Map(
             location=[KARACHI_LAT, KARACHI_LON],
             zoom_start=12,
             tiles='CartoDB positron'
         )
-        st_folium(m, width=800, height=600)
-        st.warning("No charging stations found. Add some stations to see them on the map!")
+    marker_cluster = MarkerCluster().add_to(m)
+    for _, row in df.iterrows():
+        popup_content = f"""
+        <div style='font-family: Arial, sans-serif; padding: 10px;'>
+            <h3 style='color: #4CAF50; margin-bottom: 10px;'>{row['name']}</h3>
+            <p style='margin: 5px 0;'><b>Type:</b> {row['type']}</p>
+            <p style='margin: 5px 0;'><b>Price:</b> ${row['price']}/kWh</p>
+            <p style='margin: 5px 0;'><b>Status:</b> {row['status']}</p>
+            <p style='margin: 5px 0;'><b>Rating:</b> {'⭐' * safe_rating_convert(row.get('rating'))}</p>
+            <p style='margin: 5px 0;'><b>Contact:</b> {row['contact']}</p>
+            <p style='margin: 5px 0;'><b>Amenities:</b> {', '.join(safe_json_loads(row.get('amenities', '[]')))}</p>
+        </div>
+        """
+        folium.Marker(
+            [row['lat'], row['lon']],
+            popup=folium.Popup(popup_content, max_width=300),
+            tooltip=row['name']
+        ).add_to(marker_cluster)
+    Fullscreen().add_to(m)
+    LocateControl().add_to(m)
+    st_folium(m, width=800, height=600)
 
 with tab2:
     st.markdown("### Add New Charging Station")
@@ -503,16 +491,50 @@ with tab2:
 with tab3:
     st.markdown("### Find Nearest Charging Stations")
     st.markdown("Enter your location to find the nearest charging stations.")
-    
-    # Search with improved styling
+    # Session state for user location
+    if 'user_lat' not in st.session_state:
+        st.session_state.user_lat = KARACHI_LAT
+    if 'user_lon' not in st.session_state:
+        st.session_state.user_lon = KARACHI_LON
     col1, col2 = st.columns([2, 1])
-    
     with col1:
         search_query = st.text_input("Enter location (e.g., 'New York, NY')")
-    
+        user_lat = st.number_input("Or enter your Latitude", format="%.6f", value=st.session_state.user_lat, key="user_lat_input")
+        user_lon = st.number_input("Or enter your Longitude", format="%.6f", value=st.session_state.user_lon, key="user_lon_input")
+        # Use My Own Location button (browser geolocation)
+        st.markdown('''
+        <script>
+        function getUserLocation() {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    const lat = pos.coords.latitude;
+                    const lon = pos.coords.longitude;
+                    window.parent.postMessage({type: 'set_user_location', lat: lat, lon: lon}, '*');
+                }
+            );
+        }
+        </script>
+        <button onclick='getUserLocation(); return false;' style='margin-bottom:10px;'>📍 Use My Own Location</button>
+        ''', unsafe_allow_html=True)
+        st.markdown('''
+        <script>
+        window.addEventListener("message", (event) => {
+            if (event.data.type === "set_user_location") {
+                const latInput = window.parent.document.querySelector('input[data-testid="stNumberInput"][aria-label="Or enter your Latitude"]');
+                const lonInput = window.parent.document.querySelector('input[data-testid="stNumberInput"][aria-label="Or enter your Longitude"]');
+                if (latInput && lonInput) {
+                    latInput.value = event.data.lat;
+                    lonInput.value = event.data.lon;
+                    latInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    lonInput.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            }
+        });
+        </script>
+        ''', unsafe_allow_html=True)
     with col2:
         max_distance = st.slider("Maximum Distance (km)", 1, 100, 10)
-    
+    # Use the coordinates if provided
     if search_query:
         try:
             # Get coordinates for the search query
@@ -559,4 +581,35 @@ with tab3:
                 st.error("Location not found. Please try a different search query.")
         except Exception as e:
             st.error(f"Error searching for locations: {str(e)}")
+    elif user_lat and user_lon:
+        try:
+            df['distance'] = df.apply(
+                lambda row: geodesic(
+                    (user_lat, user_lon),
+                    (row['lat'], row['lon'])
+                ).kilometers,
+                axis=1
+            )
+            nearby_stations = df[df['distance'] <= max_distance].sort_values('distance')
+            if not nearby_stations.empty:
+                st.success(f"Found {len(nearby_stations)} charging stations within {max_distance}km")
+                for _, row in nearby_stations.iterrows():
+                    with st.expander(f"{row['name']} ({row['distance']:.1f}km away)"):
+                        st.markdown(f"""
+                        - **Type:** {row['type']}
+                        - **Price:** ${row['price']}/kWh
+                        - **Status:** {row['status']}
+                        - **Rating:** {'⭐' * safe_rating_convert(row.get('rating'))}
+                        - **Contact:** {row['contact']}
+                        - **Amenities:** {', '.join(safe_json_loads(row.get('amenities', '[]')))}
+                        - **Operating Hours:** {row.get('operating_hours', 'Not specified')}
+                        """)
+                        rating = st.slider("Rate this charger", 1, 5, 3)
+                        if st.button(f"Submit Rating for {row['name']}"):
+                            st.success(f"Thank you for rating {row['name']} with {rating} stars!")
+            else:
+                st.warning(f"No charging stations found within {max_distance}km")
+        except Exception as e:
+            st.error(f"Error searching for locations: {str(e)}")
+
 
