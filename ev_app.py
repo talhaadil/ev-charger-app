@@ -196,31 +196,40 @@ tab1, tab2, tab3 = st.tabs(["🗺️ Map View", "📝 Add Charger", "🔍 Find N
 KARACHI_LAT = 24.8607
 KARACHI_LON = 67.0011
 
+# Load data
+try:
+    data = sheet.get_all_records()
+    df = pd.DataFrame(data)
+    # ... your header and cleaning logic ...
+except Exception as e:
+    st.error(f"Error loading data: {str(e)}")
+    df = pd.DataFrame()  # Always define df, even if empty
+
 with tab1:
     st.markdown("### View Charging Stations")
     st.markdown("Explore charging stations on the interactive map below.")
-    # Use the same map style as Add Charger (centered on Karachi by default)
     map_center = [st.session_state.add_lat if 'add_lat' in st.session_state else KARACHI_LAT,
                   st.session_state.add_lon if 'add_lon' in st.session_state else KARACHI_LON]
     m = folium.Map(location=map_center, zoom_start=12, tiles='CartoDB positron')
     marker_cluster = MarkerCluster().add_to(m)
-    for _, row in df.iterrows():
-        popup_content = f"""
-        <div style='font-family: Arial, sans-serif; padding: 10px;'>
-            <h3 style='color: #4CAF50; margin-bottom: 10px;'>{row['name']}</h3>
-            <p style='margin: 5px 0;'><b>Type:</b> {row['type']}</p>
-            <p style='margin: 5px 0;'><b>Price:</b> ${row['price']}/kWh</p>
-            <p style='margin: 5px 0;'><b>Status:</b> {row['status']}</p>
-            <p style='margin: 5px 0;'><b>Rating:</b> {'⭐' * safe_rating_convert(row.get('rating'))}</p>
-            <p style='margin: 5px 0;'><b>Contact:</b> {row['contact']}</p>
-            <p style='margin: 5px 0;'><b>Amenities:</b> {', '.join(safe_json_loads(row.get('amenities', '[]')))}</p>
-        </div>
-        """
-        folium.Marker(
-            [row['lat'], row['lon']],
-            popup=folium.Popup(popup_content, max_width=300),
-            tooltip=row['name']
-        ).add_to(marker_cluster)
+    if not df.empty:
+        for _, row in df.iterrows():
+            popup_content = f"""
+            <div style='font-family: Arial, sans-serif; padding: 10px;'>
+                <h3 style='color: #4CAF50; margin-bottom: 10px;'>{row['name']}</h3>
+                <p style='margin: 5px 0;'><b>Type:</b> {row['type']}</p>
+                <p style='margin: 5px 0;'><b>Price:</b> ${row['price']}/kWh</p>
+                <p style='margin: 5px 0;'><b>Status:</b> {row['status']}</p>
+                <p style='margin: 5px 0;'><b>Rating:</b> {'⭐' * safe_rating_convert(row.get('rating'))}</p>
+                <p style='margin: 5px 0;'><b>Contact:</b> {row['contact']}</p>
+                <p style='margin: 5px 0;'><b>Amenities:</b> {', '.join(safe_json_loads(row.get('amenities', '[]')))}</p>
+            </div>
+            """
+            folium.Marker(
+                [row['lat'], row['lon']],
+                popup=folium.Popup(popup_content, max_width=300),
+                tooltip=row['name']
+            ).add_to(marker_cluster)
     Fullscreen().add_to(m)
     LocateControl().add_to(m)
     st_folium(m, width=800, height=600)
@@ -456,4 +465,3 @@ with tab3:
                 st.warning(f"No charging stations found within {max_distance}km")
         except Exception as e:
             st.error(f"Error searching for locations: {str(e)}")
-
