@@ -65,30 +65,46 @@ st.markdown("""
 splash_html = '''
 <div id="splash" style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:9999;background:#0f2027;display:flex;flex-direction:column;align-items:center;justify-content:center;">
     <audio id="splash-audio" src="https://cdn.pixabay.com/audio/2022/07/26/audio_124bfa4c3b.mp3"></audio>
-    <img id="car-img" src="https://cdn.pixabay.com/animation/2023/03/01/10/09/10-09-44-401_512.gif" style="width:200px;filter:drop-shadow(0 0 40px #00c6ff);margin-bottom:30px;" />
-    <h1 style="color:#00c6ff;font-size:2.5rem;font-family:sans-serif;letter-spacing:2px;">EV CHARGER FINDER</h1>
+    <img id="car-img" src="https://cdn.pixabay.com/animation/2023/03/01/10/09/10-09-44-401_512.gif" style="width:120px;filter:drop-shadow(0 0 40px #00c6ff);margin-bottom:10px;" />
+    <h1 style="color:#00c6ff;font-size:1.3rem;font-family:sans-serif;letter-spacing:2px;margin:0 0 8px 0;padding:0;line-height:1.1;">EV CHARGER FINDER</h1>
+    <button id="play-btn" style="display:none;margin-top:10px;padding:6px 18px;background:#00c6ff;color:#fff;border:none;border-radius:6px;font-size:1rem;cursor:pointer;">Play Sound</button>
 </div>
 <script>
 window.onload = function() {
     var audio = document.getElementById('splash-audio');
-    audio.volume = 1.0;
-    audio.play();
-    setTimeout(function() {
-        var car = document.getElementById('car-img');
-        car.style.transition = 'transform 1.2s cubic-bezier(0.4,2,0.6,1), opacity 1.2s';
-        car.style.transform = 'translateX(600px) scale(1.2)';
-        car.style.opacity = '0.2';
-    }, 1200);
-    setTimeout(function() {
-        var splash = document.getElementById('splash');
-        splash.style.transition = 'opacity 1s';
-        splash.style.opacity = 0;
-        setTimeout(function(){ splash.style.display = 'none'; }, 1000);
-    }, 2200);
+        var playBtn = document.getElementById('play-btn');
+    var played = false;
+    function playSplash() {
+        if (!played) {
+            audio.volume = 1.0;
+            audio.play().then(()=>{
+                played = true;
+                playBtn.style.display = 'none';
+                setTimeout(function() {
+                    var car = document.getElementById('car-img');
+                    car.style.transition = 'transform 1.2s cubic-bezier(0.4,2,0.6,1), opacity 1.2s';
+                    car.style.transform = 'translateX(600px) scale(1.2)';
+                    car.style.opacity = '0.2';
+                }, 1200);
+                setTimeout(function() {
+                    var splash = document.getElementById('splash');
+                    splash.style.transition = 'opacity 1s';
+                    splash.style.opacity = 0;
+                    setTimeout(function(){ splash.style.display = 'none'; }, 1000);
+                }, 2200);
+            }).catch(()=>{
+                playBtn.style.display = 'block';
+            });
+        }
+    }
+    playSplash();
+    playBtn.onclick = playSplash;
+
 }
 </script>
 '''
-components.html(splash_html, height=600)
+components.html(splash_html, height=350)
+
 
 
 
