@@ -196,6 +196,29 @@ tab1, tab2, tab3 = st.tabs(["🗺️ Map View", "📝 Add Charger", "🔍 Find N
 KARACHI_LAT = 24.8607
 KARACHI_LON = 67.0011
 
+# Google Sheets connection
+try:
+    # ... your credentials and gspread logic ...
+    scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
+    google_creds_dict = {
+        "type": st.secrets["gcp_service_account"]["type"],
+        "project_id": st.secrets["gcp_service_account"]["project_id"],
+        "private_key_id": st.secrets["gcp_service_account"]["private_key_id"],
+        "private_key": st.secrets["gcp_service_account"]["private_key"].replace('\\n', '\n'),
+        "client_email": st.secrets["gcp_service_account"]["client_email"],
+        "client_id": st.secrets["gcp_service_account"]["client_id"],
+        "auth_uri": st.secrets["gcp_service_account"]["auth_uri"],
+        "token_uri": st.secrets["gcp_service_account"]["token_uri"],
+        "auth_provider_x509_cert_url": st.secrets["gcp_service_account"]["auth_provider_x509_cert_url"],
+        "client_x509_cert_url": st.secrets["gcp_service_account"]["client_x509_cert_url"]
+    }
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(google_creds_dict, scope)
+    client = gspread.authorize(creds)
+    sheet = client.open('ev_chargers').sheet1
+except Exception as e:
+    st.error(f"Error connecting to Google Sheets: {e}")
+    st.stop()
+
 # Load data
 try:
     data = sheet.get_all_records()
@@ -400,14 +423,50 @@ with tab3:
     with col2:
         max_distance = st.slider("Maximum Distance (km)", 1, 100, 10)
     if search_query:
-        try:
-            from geopy.geocoders import Nominatim
-            geolocator = Nominatim(user_agent="ev_charger_finder")
-            location = geolocator.geocode(search_query)
-            if location:
+        if not df.empty:
+            try:
+                from geopy.geocoders import Nominatim
+                geolocator = Nominatim(user_agent="ev_charger_finder")
+                location = geolocator.geocode(search_query)
+                if location:
+                    df['distance'] = df.apply(
+                        lambda row: geodesic(
+                            (location.latitude, location.longitude),
+                            (row['lat'], row['lon'])
+                        ).kilometers,
+                        axis=1
+                    )
+                    nearby_stations = df[df['distance'] <= max_distance].sort_values('distance')
+                    if not nearby_stations.empty:
+                        st.success(f"Found {len(nearby_stations)} charging stations within {max_distance}km")
+                        for idx, row in nearby_stations.iterrows():
+                            with st.expander(f"{row['name']} ({row['distance']:.1f}km away)"):
+                                st.markdown(f"""
+                                - **Type:** {row['type']}
+                                - **Price:** ${row['price']}/kWh
+                                - **Status:** {row['status']}
+                                - **Rating:** {'⭐' * safe_rating_convert(row.get('rating'))}
+                                - **Contact:** {row['contact']}
+                                - **Amenities:** {', '.join(safe_json_loads(row.get('amenities', '[]')))}
+                                - **Operating Hours:** {row.get('operating_hours', 'Not specified')}
+                                """)
+                                rating = st.slider("Rate this charger", 1, 5, 3, key=f"rating_slider_{idx}")
+                                if st.button(f"Submit Rating for {row['name']}", key=f"rate_btn_{idx}"):
+                                    st.success(f"Thank you for rating {row['name']} with {rating} stars!")
+                    else:
+                        st.warning(f"No charging stations found within {max_distance}km")
+                else:
+                    st.error("Location not found. Please try a different search query.")
+            except Exception as e:
+                st.error(f"Error searching for locations: {str(e)}")
+        else:
+            st.warning("No data available to search.")
+    elif user_lat and user_lon:
+        if not df.empty:
+            try:
                 df['distance'] = df.apply(
                     lambda row: geodesic(
-                        (location.latitude, location.longitude),
+                        (user_lat, user_lon),
                         (row['lat'], row['lon'])
                     ).kilometers,
                     axis=1
@@ -431,37 +490,8 @@ with tab3:
                                 st.success(f"Thank you for rating {row['name']} with {rating} stars!")
                 else:
                     st.warning(f"No charging stations found within {max_distance}km")
-            else:
-                st.error("Location not found. Please try a different search query.")
-        except Exception as e:
-            st.error(f"Error searching for locations: {str(e)}")
-    elif user_lat and user_lon:
-        try:
-            df['distance'] = df.apply(
-                lambda row: geodesic(
-                    (user_lat, user_lon),
-                    (row['lat'], row['lon'])
-                ).kilometers,
-                axis=1
-            )
-            nearby_stations = df[df['distance'] <= max_distance].sort_values('distance')
-            if not nearby_stations.empty:
-                st.success(f"Found {len(nearby_stations)} charging stations within {max_distance}km")
-                for idx, row in nearby_stations.iterrows():
-                    with st.expander(f"{row['name']} ({row['distance']:.1f}km away)"):
-                        st.markdown(f"""
-                        - **Type:** {row['type']}
-                        - **Price:** ${row['price']}/kWh
-                        - **Status:** {row['status']}
-                        - **Rating:** {'⭐' * safe_rating_convert(row.get('rating'))}
-                        - **Contact:** {row['contact']}
-                        - **Amenities:** {', '.join(safe_json_loads(row.get('amenities', '[]')))}
-                        - **Operating Hours:** {row.get('operating_hours', 'Not specified')}
-                        """)
-                        rating = st.slider("Rate this charger", 1, 5, 3, key=f"rating_slider_{idx}")
-                        if st.button(f"Submit Rating for {row['name']}", key=f"rate_btn_{idx}"):
-                            st.success(f"Thank you for rating {row['name']} with {rating} stars!")
-            else:
-                st.warning(f"No charging stations found within {max_distance}km")
-        except Exception as e:
-            st.error(f"Error searching for locations: {str(e)}")
+            except Exception as e:
+                st.error(f"Error searching for locations: {str(e)}")
+        else:
+            st.warning("No data available to search.")
+
