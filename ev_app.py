@@ -241,7 +241,7 @@ with tab1:
             <div style='font-family: Arial, sans-serif; padding: 10px;'>
                 <h3 style='color: #4CAF50; margin-bottom: 10px;'>{row['name']}</h3>
                 <p style='margin: 5px 0;'><b>Type:</b> {row['type']}</p>
-                <p style='margin: 5px 0;'><b>Price:</b> ${row['price']}/kWh</p>
+                <p style='margin: 5px 0;'><b>Price:</b> Rs. {row['price']}/kWh</p>
                 <p style='margin: 5px 0;'><b>Status:</b> {row['status']}</p>
                 <p style='margin: 5px 0;'><b>Rating:</b> {'⭐' * safe_rating_convert(row.get('rating'))}</p>
                 <p style='margin: 5px 0;'><b>Contact:</b> {row['contact']}</p>
@@ -310,7 +310,7 @@ with tab2:
     m_picker = folium.Map(location=[st.session_state.add_lat, st.session_state.add_lon], zoom_start=12)
     marker = folium.Marker([st.session_state.add_lat, st.session_state.add_lon], draggable=True)
     marker.add_to(m_picker)
-    map_picker_data = st_folium(m_picker, width=500, height=350, returned_objects=["last_clicked", "last_object_clicked_tooltip"] )
+    map_picker_data = st_folium(m_picker, use_container_width=True, height=350, returned_objects=["last_clicked", "last_object_clicked_tooltip"])
     if map_picker_data and map_picker_data.get("last_clicked"):
         st.session_state.add_lat = map_picker_data["last_clicked"]["lat"]
         st.session_state.add_lon = map_picker_data["last_clicked"]["lng"]
@@ -326,7 +326,7 @@ with tab2:
         with col1:
             name = st.text_input("Station Name")
             lat = st.number_input("Latitude", format="%.6f", value=st.session_state.add_lat, key="lat_input")
-            price = st.number_input("Price per kWh ($)", value=0.0, format="%.2f")
+            price = st.number_input("Price per kWh (PKR)", value=0.0, format="%.2f")
             charger_type = st.selectbox("Charger Type", ["2kWh", "7kWh", "50kWh", "Other"])
             charger_desc = ""
             if charger_type == "Other":
@@ -443,7 +443,7 @@ with tab3:
                             with st.expander(f"{row['name']} ({row['distance']:.1f}km away)"):
                                 st.markdown(f"""
                                 - **Type:** {row['type']}
-                                - **Price:** ${row['price']}/kWh
+                                - **Price:** Rs. {row['price']}/kWh
                                 - **Status:** {row['status']}
                                 - **Rating:** {'⭐' * safe_rating_convert(row.get('rating'))}
                                 - **Contact:** {row['contact']}
@@ -478,7 +478,7 @@ with tab3:
                         with st.expander(f"{row['name']} ({row['distance']:.1f}km away)"):
                             st.markdown(f"""
                             - **Type:** {row['type']}
-                            - **Price:** ${row['price']}/kWh
+                            - **Price:** Rs. {row['price']}/kWh
                             - **Status:** {row['status']}
                             - **Rating:** {'⭐' * safe_rating_convert(row.get('rating'))}
                             - **Contact:** {row['contact']}
@@ -494,3 +494,4 @@ with tab3:
                 st.error(f"Error searching for locations: {str(e)}")
         else:
             st.warning("No data available to search.")
+
