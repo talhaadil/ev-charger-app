@@ -319,7 +319,7 @@ except Exception as e:
     df = pd.DataFrame()
 
 # Main app
-st.title("⚡ Freddie - EV Charging Station Finder")
+st.title("⚡ EV Charging Station Finder")
 st.markdown("Find and manage electric vehicle charging stations near you!")
 
 # Create tabs for different sections
@@ -375,60 +375,111 @@ with tab2:
     Fill in the details below to add a new charging station.
     > Note: Email verification will be added soon for enhanced security.
     """)
+
+    # Session state for map picker
+    if 'add_lat' not in st.session_state:
+        st.session_state.add_lat = 24.8607
+    if 'add_lon' not in st.session_state:
+        st.session_state.add_lon = 67.0011
+
+    # Use My Location button (browser geolocation)
+    st.markdown('''
+    <script>
+    function getLocation() {
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                const lat = pos.coords.latitude;
+                const lon = pos.coords.longitude;
+                window.parent.postMessage({type: 'set_location', lat: lat, lon: lon}, '*');
+            }
+        );
+    }
+    </script>
+    <button onclick='getLocation(); return false;' style='margin-bottom:10px;'>📍 Use My Location</button>
+    ''', unsafe_allow_html=True)
+
+    # Listen for location from browser
+    st_folium_js = '''
+    <script>
+    window.addEventListener("message", (event) => {
+        if (event.data.type === "set_location") {
+            const latInput = window.parent.document.querySelector('input[data-testid="stNumberInput"][aria-label="Latitude"]');
+            const lonInput = window.parent.document.querySelector('input[data-testid="stNumberInput"][aria-label="Longitude"]');
+            if (latInput && lonInput) {
+                latInput.value = event.data.lat;
+                lonInput.value = event.data.lon;
+                latInput.dispatchEvent(new Event('input', { bubbles: true }));
+                lonInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        }
+    });
+    </script>
+    '''
+    st.markdown(st_folium_js, unsafe_allow_html=True)
+
+    # Map picker
+    st.write("**Pick location on map:** (drag the marker)")
+    m_picker = folium.Map(location=[st.session_state.add_lat, st.session_state.add_lon], zoom_start=12)
+    marker = folium.Marker([st.session_state.add_lat, st.session_state.add_lon], draggable=True)
+    marker.add_to(m_picker)
+    map_picker_data = st_folium(m_picker, width=500, height=350, returned_objects=["last_clicked", "last_object_clicked_tooltip"] )
+    if map_picker_data and map_picker_data.get("last_clicked"):
+        st.session_state.add_lat = map_picker_data["last_clicked"]["lat"]
+        st.session_state.add_lon = map_picker_data["last_clicked"]["lng"]
+
+    col1, col2 = st.columns(2)
+    with col1:
+        name = st.text_input("Station Name")
+        lat = st.number_input("Latitude", format="%.6f", value=st.session_state.add_lat, key="lat_input")
+        price = st.number_input("Price per kWh ($)", value=0.0, format="%.2f")
+        charger_type = st.selectbox("Charger Type", ["2kWh", "7kWh", "50kWh", "Other"])
+        charger_desc = ""
+        if charger_type == "Other":
+            charger_desc = st.text_input("Describe the charger type (required)")
+        contact = st.text_input("Contact Information")
+    with col2:
+        lon = st.number_input("Longitude", format="%.6f", value=st.session_state.add_lon, key="lon_input")
+        status = st.selectbox("Status", ["Available", "In Use", "Out of Service"])
+        amenities = st.multiselect(
+            "Amenities",
+            ["Restrooms", "Food", "Shopping", "WiFi", "Covered", "24/7"]
+        )
+        operating_hours = st.text_input("Operating Hours (e.g., '24/7' or '9 AM - 10 PM')")
+
+    # Keep map and fields in sync
+    st.session_state.add_lat = lat
+    st.session_state.add_lon = lon
+
+    submit_button = st.form_submit_button("Add Charging Station")
     
-    # Form with improved styling
-    with st.form("add_charger_form"):
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            name = st.text_input("Station Name")
-            lat = st.number_input("Latitude", value=0.0, format="%.6f")
-            price = st.number_input("Price per kWh ($)", value=0.0, format="%.2f")
-            charger_type = st.selectbox("Charger Type", ["2kWh", "7kWh", "50kWh", "Other"])
-            charger_desc = ""
-            if charger_type == "Other":
-                charger_desc = st.text_input("Describe the charger type (required)")
-            contact = st.text_input("Contact Information")
-        
-        with col2:
-            lon = st.number_input("Longitude", value=0.0, format="%.6f")
-            status = st.selectbox("Status", ["Available", "In Use", "Out of Service"])
-            amenities = st.multiselect(
-                "Amenities",
-                ["Restrooms", "Food", "Shopping", "WiFi", "Covered", "24/7"]
-            )
-            operating_hours = st.text_input("Operating Hours (e.g., '24/7' or '9 AM - 10 PM')")
-        
-        submit_button = st.form_submit_button("Add Charging Station")
-        
-        if submit_button:
-            if name and lat != 0 and lon != 0 and (charger_type != "Other" or (charger_type == "Other" and charger_desc.strip() != "")):
-                try:
-                    # Prepare data
-                    new_data = {
-                        'name': name,
-                        'lat': lat,
-                        'lon': lon,
-                        'price': price,
-                        'type': charger_type if charger_type != "Other" else charger_desc,
-                        'contact': contact,
-                        'status': status,
-                        'rating': 0,
-                        'reviews': 0,
-                        'amenities': json.dumps(amenities),
-                        'operating_hours': operating_hours,
-                        'verified_email': 'pending_verification'  # Placeholder for now
-                    }
-                    
-                    # Add to Google Sheet
-                    sheet.append_row(list(new_data.values()))
-                    st.success("Charging station added successfully!")
-                    time.sleep(2)
-                    st.experimental_rerun()
-                except Exception as e:
-                    st.error(f"Error adding charging station: {str(e)}")
-            else:
-                st.error("Please fill in all required fields (name, latitude, longitude, and charger description if 'Other' is selected)")
+    if submit_button:
+        if name and lat != 0 and lon != 0 and (charger_type != "Other" or (charger_type == "Other" and charger_desc.strip() != "")):
+            try:
+                # Prepare data
+                new_data = {
+                    'name': name,
+                    'lat': lat,
+                    'lon': lon,
+                    'price': price,
+                    'type': charger_type if charger_type != "Other" else charger_desc,
+                    'contact': contact,
+                    'status': status,
+                    'rating': 0,
+                    'reviews': 0,
+                    'amenities': json.dumps(amenities),
+                    'operating_hours': operating_hours,
+                    'verified_email': 'pending_verification'  # Placeholder for now
+                }
+                
+                # Add to Google Sheet
+                sheet.append_row(list(new_data.values()))
+                st.success("Charging station added successfully!")
+                time.sleep(2)
+                st.experimental_rerun()
+            except Exception as e:
+                st.error(f"Error adding charging station: {str(e)}")
+        else:
+            st.error("Please fill in all required fields (name, latitude, longitude, and charger description if 'Other' is selected)")
 
 with tab3:
     st.markdown("### Find Nearest Charging Stations")
@@ -489,3 +540,4 @@ with tab3:
                 st.error("Location not found. Please try a different search query.")
         except Exception as e:
             st.error(f"Error searching for locations: {str(e)}")
+
