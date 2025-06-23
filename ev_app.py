@@ -15,6 +15,82 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import random
 import string
+import streamlit.components.v1 as components
+
+
+# Custom CSS for blue/black electric theme
+st.markdown("""
+    <style>
+    body, .stApp {
+        background: linear-gradient(135deg, #0f2027 0%, #2c5364 100%) !important;
+        color: #e0e6f7 !important;
+    }
+    .stButton>button {
+        background-color: #00c6ff !important;
+        color: #fff !important;
+        border-radius: 8px;
+        font-weight: bold;
+        border: none;
+        box-shadow: 0 0 10px #00c6ff44;
+        transition: background 0.3s;
+    }
+    .stButton>button:hover {
+        background-color: #0072ff !important;
+        box-shadow: 0 0 20px #00c6ff99;
+    }
+    .stTabs [data-baseweb="tab-list"] {
+        background: #101820;
+        border-radius: 8px 8px 0 0;
+    }
+    .stTabs [data-baseweb="tab"] {
+        color: #00c6ff;
+        font-weight: bold;
+    }
+    .stTabs [aria-selected="true"] {
+        background: #00c6ff;
+        color: #fff;
+    }
+    .stMarkdown, .stTextInput, .stNumberInput, .stSelectbox, .stMultiselect {
+        background: #181f2a !important;
+        color: #e0e6f7 !important;
+        border-radius: 8px;
+    }
+    .stAlert, .stSuccess, .stError, .stWarning, .stInfo {
+        border-radius: 8px;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# --- Splash screen with sound and animation ---
+splash_html = '''
+<div id="splash" style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:9999;background:#0f2027;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+    <audio id="splash-audio" src="https://cdn.pixabay.com/audio/2022/07/26/audio_124bfa4c3b.mp3"></audio>
+    <img id="car-img" src="https://cdn.pixabay.com/animation/2023/03/01/10/09/10-09-44-401_512.gif" style="width:200px;filter:drop-shadow(0 0 40px #00c6ff);margin-bottom:30px;" />
+    <h1 style="color:#00c6ff;font-size:2.5rem;font-family:sans-serif;letter-spacing:2px;">EV CHARGER FINDER</h1>
+</div>
+<script>
+window.onload = function() {
+    var audio = document.getElementById('splash-audio');
+    audio.volume = 1.0;
+    audio.play();
+    setTimeout(function() {
+        var car = document.getElementById('car-img');
+        car.style.transition = 'transform 1.2s cubic-bezier(0.4,2,0.6,1), opacity 1.2s';
+        car.style.transform = 'translateX(600px) scale(1.2)';
+        car.style.opacity = '0.2';
+    }, 1200);
+    setTimeout(function() {
+        var splash = document.getElementById('splash');
+        splash.style.transition = 'opacity 1s';
+        splash.style.opacity = 0;
+        setTimeout(function(){ splash.style.display = 'none'; }, 1000);
+    }, 2200);
+}
+</script>
+'''
+components.html(splash_html, height=600)
+
+
 
 def safe_rating_convert(rating_value):
     """Safely convert rating value to integer, handling all edge cases."""
