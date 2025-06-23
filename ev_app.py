@@ -64,7 +64,7 @@ st.markdown("""
 # --- Splash screen with sound and animation ---
 splash_html = f'''
 <div id="splash" style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:9999;
-    background: url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80') center center/cover no-repeat, #0f2027;
+    background: url('https://images.unsplash.com/photo-1701606819782-2e8e2e7c318e?auto=format&fit=crop&w=1200&q=80') center center/cover no-repeat, #0f2027;
     display:flex;flex-direction:column;align-items:center;justify-content:center;">
     <audio id="splash-audio" src="https://cdn.pixabay.com/audio/2022/07/26/audio_124bfa4c3b.mp3"></audio>
     <h1 style="color:#00c6ff;font-size:1.3rem;font-family:sans-serif;letter-spacing:2px;
