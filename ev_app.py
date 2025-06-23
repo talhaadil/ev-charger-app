@@ -255,7 +255,7 @@ with tab1:
             ).add_to(marker_cluster)
     Fullscreen().add_to(m)
     LocateControl().add_to(m)
-    st_folium(m, width=800, height=600)
+    st_folium(m, use_container_width=True, height=600)
 
 with tab2:
     st.markdown("### Add New Charging Station")
@@ -494,4 +494,3 @@ with tab3:
                 st.error(f"Error searching for locations: {str(e)}")
         else:
             st.warning("No data available to search.")
-
