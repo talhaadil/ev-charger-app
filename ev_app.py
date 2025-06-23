@@ -186,7 +186,7 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
-st.image("static/ev_header.jpg", use_column_width=True)
+st.image("static/ev_header.jpg", use_container_width=True)
 st.title("⚡ Freddie - your EV Charger Finder Buddy")
 st.markdown("Find and manage electric vehicle charging stations near you!")
 
