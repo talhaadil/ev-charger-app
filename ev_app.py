@@ -168,7 +168,7 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
-st.title("⚡ Freddie - your EV Charger Finder Buddy")
+st.title("⚡ Freddie - EV Charger Buddy")
 st.markdown("Find and manage electric vehicle charging stations near you!")
 
 # Create tabs for different sections
