@@ -68,7 +68,7 @@ splash_html = f'''
     display:flex;flex-direction:column;align-items:center;justify-content:center;">
     <audio id="splash-audio" src="https://cdn.pixabay.com/audio/2022/07/26/audio_124bfa4c3b.mp3"></audio>
     <h1 style="color:#00c6ff;font-size:1.3rem;font-family:sans-serif;letter-spacing:2px;
-        margin:0 0 8px 0;padding:0;line-height:1.1;">EV CHARGER FINDER</h1>
+        margin:0 0 8px 0;padding:0;line-height:1.1;"></h1>
 </div>
 <script>
 window.onload = function() {{
@@ -163,7 +163,7 @@ if 'verification_step' not in st.session_state:
 
 # Main app
 st.set_page_config(
-    page_title="Freddie - your EV Charger Finder Buddy",
+    page_title="Freddie - EV Charger Buddy",
     page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded"
