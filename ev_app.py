@@ -384,7 +384,10 @@ with tab2:
             name = st.text_input("Station Name")
             lat = st.number_input("Latitude", value=0.0, format="%.6f")
             price = st.number_input("Price per kWh ($)", value=0.0, format="%.2f")
-            charger_type = st.selectbox("Charger Type", ["Level 1", "Level 2", "DC Fast"])
+            charger_type = st.selectbox("Charger Type", ["2kWh", "7kWh", "50kWh", "Other"])
+            charger_desc = ""
+            if charger_type == "Other":
+                charger_desc = st.text_input("Describe the charger type (required)")
             contact = st.text_input("Contact Information")
         
         with col2:
@@ -399,7 +402,7 @@ with tab2:
         submit_button = st.form_submit_button("Add Charging Station")
         
         if submit_button:
-            if name and lat != 0 and lon != 0:
+            if name and lat != 0 and lon != 0 and (charger_type != "Other" or (charger_type == "Other" and charger_desc.strip() != "")):
                 try:
                     # Prepare data
                     new_data = {
@@ -407,7 +410,7 @@ with tab2:
                         'lat': lat,
                         'lon': lon,
                         'price': price,
-                        'type': charger_type,
+                        'type': charger_type if charger_type != "Other" else charger_desc,
                         'contact': contact,
                         'status': status,
                         'rating': 0,
@@ -425,7 +428,7 @@ with tab2:
                 except Exception as e:
                     st.error(f"Error adding charging station: {str(e)}")
             else:
-                st.error("Please fill in all required fields (name, latitude, and longitude)")
+                st.error("Please fill in all required fields (name, latitude, longitude, and charger description if 'Other' is selected)")
 
 with tab3:
     st.markdown("### Find Nearest Charging Stations")
