@@ -179,147 +179,14 @@ if 'seller_email' not in st.session_state:
 if 'verification_step' not in st.session_state:
     st.session_state.verification_step = 'add_charger'  # Temporarily set to final step
 
-# Custom CSS for better styling
+# Main app
 st.set_page_config(
-    page_title="EV Charging Station Finder",
+    page_title="Freddie - your EV Charger Finder Buddy",
     page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded"
 )
-
-# Custom CSS
-st.markdown("""
-    <style>
-    .main {
-        padding: 2rem;
-    }
-    .stButton>button {
-        width: 100%;
-        border-radius: 5px;
-        height: 3em;
-        background-color: #4CAF50;
-        color: white;
-        font-weight: bold;
-    }
-    .stButton>button:hover {
-        background-color: #45a049;
-    }
-    .css-1d391kg {
-        padding: 1rem;
-    }
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 2rem;
-    }
-    .stTabs [data-baseweb="tab"] {
-        height: 4rem;
-        white-space: pre-wrap;
-        background-color: #f0f2f6;
-        border-radius: 4px 4px 0 0;
-        gap: 1rem;
-        padding-top: 10px;
-        padding-bottom: 10px;
-    }
-    .stTabs [aria-selected="true"] {
-        background-color: #4CAF50;
-        color: white;
-    }
-    .stMarkdown {
-        padding: 1rem;
-    }
-    .stAlert {
-        border-radius: 5px;
-    }
-    .stSuccess {
-        background-color: #d4edda;
-        color: #155724;
-        padding: 1rem;
-        border-radius: 5px;
-    }
-    .stError {
-        background-color: #f8d7da;
-        color: #721c24;
-        padding: 1rem;
-        border-radius: 5px;
-    }
-    .stInfo {
-        background-color: #d1ecf1;
-        color: #0c5460;
-        padding: 1rem;
-        border-radius: 5px;
-    }
-    .stWarning {
-        background-color: #fff3cd;
-        color: #856404;
-        padding: 1rem;
-        border-radius: 5px;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-# Initialize Google Sheets connection
-scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
-
-# Securely get credentials from Streamlit secrets
-try:
-    google_creds_dict = {
-        "type": st.secrets["gcp_service_account"]["type"],
-        "project_id": st.secrets["gcp_service_account"]["project_id"],
-        "private_key_id": st.secrets["gcp_service_account"]["private_key_id"],
-        "private_key": st.secrets["gcp_service_account"]["private_key"].replace('\\n', '\n'),
-        "client_email": st.secrets["gcp_service_account"]["client_email"],
-        "client_id": st.secrets["gcp_service_account"]["client_id"],
-        "auth_uri": st.secrets["gcp_service_account"]["auth_uri"],
-        "token_uri": st.secrets["gcp_service_account"]["token_uri"],
-        "auth_provider_x509_cert_url": st.secrets["gcp_service_account"]["auth_provider_x509_cert_url"],
-        "client_x509_cert_url": st.secrets["gcp_service_account"]["client_x509_cert_url"]
-    }
-    creds = ServiceAccountCredentials.from_json_keyfile_dict(google_creds_dict, scope)
-    client = gspread.authorize(creds)
-    sheet = client.open('ev_chargers').sheet1
-except KeyError:
-    st.error("GCP credentials not found in Streamlit secrets. Please add them.")
-    st.stop()
-except Exception as e:
-    st.error(f"Error connecting to Google Sheets: {e}")
-    st.stop()
-
-# Load data
-try:
-    data = sheet.get_all_records()
-    df = pd.DataFrame(data)
-    
-    # Define expected headers
-    expected_headers = ['name', 'lat', 'lon', 'price', 'type', 'contact', 'status', 'rating', 'reviews', 'amenities', 'operating_hours']
-    
-    # Add missing columns with default values
-    for col in expected_headers:
-        if col not in df.columns:
-            if col == 'rating':
-                df[col] = 0
-            elif col == 'reviews':
-                df[col] = 0
-            elif col == 'amenities':
-                df[col] = '[]'
-            elif col == 'operating_hours':
-                df[col] = '24/7'
-            else:
-                df[col] = ''
-    
-    # Clean the rating column
-    if 'rating' in df.columns:
-        df['rating'] = df['rating'].apply(safe_rating_convert)
-    
-    # Convert numeric columns
-    numeric_columns = ['lat', 'lon', 'price', 'rating']
-    for col in numeric_columns:
-        if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
-except Exception as e:
-    st.error(f"Error loading data: {str(e)}")
-    df = pd.DataFrame()
-
-# Main app
-st.title("⚡ EV Charging Station Finder")
+st.title("⚡ Freddie - your EV Charger Finder Buddy")
 st.markdown("Find and manage electric vehicle charging stations near you!")
 
 # Create tabs for different sections
@@ -333,18 +200,9 @@ with tab1:
     st.markdown("### View Charging Stations")
     st.markdown("Explore charging stations on the interactive map below.")
     # Use the same map style as Add Charger (centered on Karachi by default)
-    if not df.empty:
-        m = folium.Map(
-            location=[df['lat'].mean(), df['lon'].mean()],
-            zoom_start=13,
-            tiles='CartoDB positron'
-        )
-    else:
-        m = folium.Map(
-            location=[KARACHI_LAT, KARACHI_LON],
-            zoom_start=12,
-            tiles='CartoDB positron'
-        )
+    map_center = [st.session_state.add_lat if 'add_lat' in st.session_state else KARACHI_LAT,
+                  st.session_state.add_lon if 'add_lon' in st.session_state else KARACHI_LON]
+    m = folium.Map(location=map_center, zoom_start=12, tiles='CartoDB positron')
     marker_cluster = MarkerCluster().add_to(m)
     for _, row in df.iterrows():
         popup_content = f"""
@@ -491,7 +349,6 @@ with tab2:
 with tab3:
     st.markdown("### Find Nearest Charging Stations")
     st.markdown("Enter your location to find the nearest charging stations.")
-    # Session state for user location
     if 'user_lat' not in st.session_state:
         st.session_state.user_lat = KARACHI_LAT
     if 'user_lon' not in st.session_state:
@@ -501,7 +358,6 @@ with tab3:
         search_query = st.text_input("Enter location (e.g., 'New York, NY')")
         user_lat = st.number_input("Or enter your Latitude", format="%.6f", value=st.session_state.user_lat, key="user_lat_input")
         user_lon = st.number_input("Or enter your Longitude", format="%.6f", value=st.session_state.user_lon, key="user_lon_input")
-        # Use My Own Location button (browser geolocation)
         st.markdown('''
         <script>
         function getUserLocation() {
@@ -534,16 +390,12 @@ with tab3:
         ''', unsafe_allow_html=True)
     with col2:
         max_distance = st.slider("Maximum Distance (km)", 1, 100, 10)
-    # Use the coordinates if provided
     if search_query:
         try:
-            # Get coordinates for the search query
             from geopy.geocoders import Nominatim
             geolocator = Nominatim(user_agent="ev_charger_finder")
             location = geolocator.geocode(search_query)
-            
             if location:
-                # Calculate distances
                 df['distance'] = df.apply(
                     lambda row: geodesic(
                         (location.latitude, location.longitude),
@@ -551,15 +403,10 @@ with tab3:
                     ).kilometers,
                     axis=1
                 )
-                
-                # Filter by distance
                 nearby_stations = df[df['distance'] <= max_distance].sort_values('distance')
-                
                 if not nearby_stations.empty:
                     st.success(f"Found {len(nearby_stations)} charging stations within {max_distance}km")
-                    
-                    # Display results in a nice format
-                    for _, row in nearby_stations.iterrows():
+                    for idx, row in nearby_stations.iterrows():
                         with st.expander(f"{row['name']} ({row['distance']:.1f}km away)"):
                             st.markdown(f"""
                             - **Type:** {row['type']}
@@ -570,10 +417,8 @@ with tab3:
                             - **Amenities:** {', '.join(safe_json_loads(row.get('amenities', '[]')))}
                             - **Operating Hours:** {row.get('operating_hours', 'Not specified')}
                             """)
-                            
-                            # Add rating functionality
-                            rating = st.slider("Rate this charger", 1, 5, 3)
-                            if st.button(f"Submit Rating for {row['name']}"):
+                            rating = st.slider("Rate this charger", 1, 5, 3, key=f"rating_slider_{idx}")
+                            if st.button(f"Submit Rating for {row['name']}", key=f"rate_btn_{idx}"):
                                 st.success(f"Thank you for rating {row['name']} with {rating} stars!")
                 else:
                     st.warning(f"No charging stations found within {max_distance}km")
@@ -593,7 +438,7 @@ with tab3:
             nearby_stations = df[df['distance'] <= max_distance].sort_values('distance')
             if not nearby_stations.empty:
                 st.success(f"Found {len(nearby_stations)} charging stations within {max_distance}km")
-                for _, row in nearby_stations.iterrows():
+                for idx, row in nearby_stations.iterrows():
                     with st.expander(f"{row['name']} ({row['distance']:.1f}km away)"):
                         st.markdown(f"""
                         - **Type:** {row['type']}
@@ -604,12 +449,11 @@ with tab3:
                         - **Amenities:** {', '.join(safe_json_loads(row.get('amenities', '[]')))}
                         - **Operating Hours:** {row.get('operating_hours', 'Not specified')}
                         """)
-                        rating = st.slider("Rate this charger", 1, 5, 3)
-                        if st.button(f"Submit Rating for {row['name']}"):
+                        rating = st.slider("Rate this charger", 1, 5, 3, key=f"rating_slider_{idx}")
+                        if st.button(f"Submit Rating for {row['name']}", key=f"rate_btn_{idx}"):
                             st.success(f"Thank you for rating {row['name']} with {rating} stars!")
             else:
                 st.warning(f"No charging stations found within {max_distance}km")
         except Exception as e:
             st.error(f"Error searching for locations: {str(e)}")
-
 
